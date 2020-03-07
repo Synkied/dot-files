@@ -1,0 +1,45 @@
+cd ()
+{
+    builtin cd "$@"
+    RETVAL=$?
+    # Test for successful real cd:
+    if [ 0 -ne $RETVAL ]; then
+        return $RETVAL
+    fi
+    # Deactivate once I move outside the virtualenv directory or
+    # do nothing when I'm still in this same virtualenv directory
+    # (Assuming no one nests virtualenvs....)
+    if [ ! -z "$VIRTUAL_ENV" ]; then
+        if [ "$PWD" = "${PWD#$VIRTUAL_ENV}" ]; then
+            deactivate
+        else
+            return 0
+        fi
+    fi
+    auto_activate
+    return 0
+}
+
+find-up () {
+    path=$(pwd)
+    while [[ "$path" != "" && ! -e "$path/$1" ]]; do
+        path=${path%/*}
+    done
+    echo "$path"
+}
+
+auto_activate ()
+{
+    VENV_DIR=$(find-up ./bin/activate)
+    if [ ! -z $VENV_DIR ]; then
+        VENV_PATH="$VENV_DIR/bin/activate"
+        if [ -r $VENV_PATH ]; then
+            if head -n 1 $VENV_PATH | grep -q 'source bin/activate' > /dev/null; then
+                source $VENV_PATH
+            fi
+        fi
+    fi
+}
+
+# Auto-activate at start-up
+auto_activate
