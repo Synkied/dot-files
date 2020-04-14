@@ -17,7 +17,8 @@
   today = !git log --author=$(git config user.email) --since=yesterday
   cancel = reset HEAD^1
   correct = commit --amend -m
-  sweep = "!f(){ git branch --merged $([[ $1 != \"-f\" ]] \\\n&& git rev-parse master) | egrep -v \"(^\\*|^\\s*(master|develop)$)\" \\\n| xargs git branch -d; }; f"
+  sweep = "!f() { git branch --merged $([[ $1 != \"-f\" ]] \\\n&& git rev-parse master) | egrep -v \"(^\\*|^\\s*(master|develop)$)\" \\\n| xargs git branch -d; }; f"
+  sweeptags = "!f() { git tag -l | xargs git tag -d && git fetch --tags; }; f"
 
 [core]
   excludesfile = ~/.gitignore-python
