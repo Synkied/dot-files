@@ -159,7 +159,7 @@ function set_bash_prompt () {
   if test "$PYTHON_VIRTUALENV" && test "$GIT_STATUS" && test "$PYVERSION" ; then
     CONTEXT="${PYTHON_VIRTUALENV}:${PYVERSION}@${GIT_STATUS}"
   else
-    CONTEXT="${PYTHON_VIRTUALENV}${GIT_STATUS}"
+    CONTEXT="${PYTHON_VIRTUALENV}:${PYVERSION}${GIT_STATUS}"
   fi
   if test "$CONTEXT" ; then
     CONTEXT="${INFO_COLOR}[${CONTEXT}${INFO_COLOR}]"
