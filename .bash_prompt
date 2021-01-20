@@ -166,6 +166,9 @@ function set_bash_prompt () {
   fi
   INFOS="${INFO_COLOR}(${COLOR_NONE}\# ${CYAN}\t${INFO_COLOR})"
   TAIL="${GREEN}${PWD_TAIL}${PROMPT_SYMBOL}"
+  if [ $TILIX_ID ] ; then
+    VTE_PWD_THING="\[$(__vte_osc7)\]"
+  fi
   PS1="${CONTEXT}${INFOS}${TAIL}"
 }
 # Disable virtualenv prompt modification
