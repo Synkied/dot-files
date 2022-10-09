@@ -18,7 +18,5 @@ TODO.txt
 .coverage
 .installed.cfg
 pip-selfcheck.json
-package-lock.json
-yarn.lock
 .Python
 .python-version
