@@ -1,0 +1,92 @@
+#!/bin/bash
+
+# Exit if the `SKIP_LLM_GITHOOK` environment variable is set
+if [ ! -z "$SKIP_LLM_GITHOOK" ]; then
+  exit 0
+fi
+
+# ANSI color codes for styling the output
+RED='\033[0;31m'    # Sets text to red
+GREEN='\033[0;32m'  # Sets text to green
+YELLOW='\033[0;33m' # Sets text to yellow
+BLUE='\033[0;34m'   # Sets text to blue
+NC='\033[0m'        # Resets the text color to default, no color
+
+
+# Function to display a spinning animation during the LLM processing
+spin_animation() {
+  # Array of spinner characters for the animation
+  spinner=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+  # Infinite loop to keep the animation running
+  while true; do
+    for i in "${spinner[@]}"; do
+      tput civis  # Hide the cursor to enhance the animation appearance
+      tput el1    # Clear the line from the cursor to the beginning to display the spinner
+      printf "\r${YELLOW}%s${NC} Generating LLM commit message..." "$i"  # Print the spinner and message
+      sleep 0.1   # Delay to control the speed of the animation
+      tput cub 32 # Move the cursor back 32 columns to reset the spinner position
+    done
+  done
+}
+
+# Check if the commit is a merge commit based on the presence of a second argument
+if [ -n "$2" ]; then
+  exit 0  # Exit script if it's a merge commit, no custom message needed
+fi
+
+# Check if the `ollama` command is installed
+if ! command -v ollama &> /dev/null; then
+  echo -e "${RED}Error: 'ollama' command is not installed. Please install it and try again.${NC}"
+  exit 1
+fi
+
+# Start the spinning animation in the background
+spin_animation &
+spin_pid=$!  # Capture the process ID of the spinning animation
+
+# Generate the commit message using `git diff` piped into `ollama` command
+# The LLM command takes a system prompt from a file as input
+if ! commit_msg=$( (cat ~/.config/prompts/commit-system-prompt.txt; echo; git diff --cached) | ollama run llama3 ); then
+  # Stop the spinning animation by killing its process
+  kill $spin_pid
+  wait $spin_pid 2>/dev/null  # Wait for the process to terminate and suppress error messages
+
+  # Finalizing output
+  tput cnorm  # Show the cursor again
+  printf "\n"  # Move the cursor to the next line
+
+  echo -e "${RED}Error: 'ollama' command failed to generate the commit message:\n${commit_msg}${NC}\n\nManually set the commit message"
+  exit 1
+fi
+
+# Stop the spinning animation by killing its process
+kill $spin_pid
+wait $spin_pid 2>/dev/null  # Wait for the process to terminate and suppress error messages
+
+# Finalizing output
+tput cnorm  # Show the cursor again
+echo  # Move the cursor to the next line
+
+# Display the generated commit message with color-coded headings
+echo -e "${BLUE}=== Generated Commit Message ===${NC}"
+echo -e "${GREEN}$commit_msg${NC}"
+echo -e "${BLUE}=================================${NC}"
+echo
+
+# Force interactive mode for user input
+# This uses /dev/tty to directly connect to the terminal for input
+# even when the script is running in a non-interactive context
+echo -e -n "${YELLOW}Do you want to use this commit message? (y/n): ${NC}" > /dev/tty
+read -r confirmation < /dev/tty
+
+# Process the user's response
+if [[ "$confirmation" =~ ^[Yy]$ ]]; then
+  # User confirmed, write the commit message to the file provided as the first argument
+  echo "$commit_msg" > "$1"
+  echo -e "${GREEN}Commit message applied successfully!${NC}" > /dev/tty
+  exit 0
+else
+  # User declined, inform them they need to manually set the commit message
+  echo -e "${YELLOW}Commit message not applied. Please enter your commit message manually.${NC}" > /dev/tty
+  exit 1
+fi
